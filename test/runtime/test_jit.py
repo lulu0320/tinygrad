@@ -226,6 +226,14 @@ class TestJit(unittest.TestCase):
     with self.assertRaises(JitError):
       f(Tensor.ones(10).contiguous().realize())
 
+  def test_jit_shape_mismatch_1d_flatten_detach(self):
+    # these views fold away or carry no shape, the size change still has to be caught
+    for mk in (lambda n: Tensor.ones(n).contiguous().realize().reshape(n, 1).flatten(), lambda n: Tensor.ones(n).contiguous().realize().detach()):
+      @TinyJit
+      def f(a): return a.sum().realize()
+      for _ in range(3): f(mk(3))
+      with self.assertRaises(JitError): f(mk(10))
+
   def test_jit_1d_view_of_different_size_base(self):
     # a view is matched by the view, the size of the base it comes from doesn't matter
     @TinyJit
