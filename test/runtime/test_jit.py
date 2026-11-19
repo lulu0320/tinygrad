@@ -226,6 +226,12 @@ class TestJit(unittest.TestCase):
     with self.assertRaises(JitError):
       f(Tensor.ones(10).contiguous().realize())
 
+  def test_jit_1d_view_of_different_size_base(self):
+    # a view is matched by the view, the size of the base it comes from doesn't matter
+    @TinyJit
+    def f(a): return a.sum().realize()
+    for n in (10, 10, 10, 20): self.assertEqual(f(Tensor.ones(n).contiguous().realize()[2:5]).item(), 3)
+
   def test_jit_shape_views_mismatch(self):
     @TinyJit
     def add(a): return (a+1).realize()

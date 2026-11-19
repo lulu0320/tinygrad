@@ -92,9 +92,9 @@ def _prepare_jit_inputs(args, kwargs):
   # collect buffer UOps (including MultiBuffer)
   input_buf_uops: list[UOp] = [u.base for u in input_uops if u.base.realized is not None]
   if len(set(input_buf_uops)) != len(input_buf_uops): raise JitError("duplicate inputs to JIT")
-  # the base keeps its size: a plain buffer input has no view to carry the shape, so a different size must not match
-  inputs = [(*(u.substitute({u.base:UOp(Ops.NOOP, arg=u.base.max_numel())}, extra_pm=mop_cleanup).unbind_all()), u.dtype, u.device)
-            for u in input_uops]
+  # a plain buffer input has no view to carry its shape, so it keeps its size. views of a base are matched by the view
+  inputs = [(*(u.substitute({u.base:UOp(Ops.NOOP, arg=u.max_numel() if u is u.base else None)}, extra_pm=mop_cleanup).unbind_all()),
+             u.dtype, u.device) for u in input_uops]
   _var_vals = merge_dicts([x[1] for x in inputs] + [dict(v.unbind() for v in (args + tuple(kwargs.values())) if isinstance(v, UOp))])
   var_vals = {k.expr:v for k,v in _var_vals.items()}
   expected_input_info = [(x[0], tuple(sorted(x[1].keys(), key=lambda v: v.expr)), x[2], x[3]) for x in inputs]
