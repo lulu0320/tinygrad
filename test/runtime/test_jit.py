@@ -234,6 +234,16 @@ class TestJit(unittest.TestCase):
       for _ in range(3): f(mk(3))
       with self.assertRaises(JitError): f(mk(10))
 
+  @needs_second_gpu
+  @unittest.skipIf(not_support_multi_device(), "no multi")
+  def test_jit_sharded_1d_flatten(self):
+    # a flattened sharded input is the same input as the plain one, it must not be rejected
+    devs = (f"{Device.DEFAULT}:0", f"{Device.DEFAULT}:1")
+    @TinyJit
+    def f(a): return (a*2).sum().realize()
+    for _ in range(3): f(Tensor.full((8,), 1.).contiguous().shard(devs, axis=0).realize())
+    self.assertEqual(f(Tensor.full((8,), 3.).contiguous().shard(devs, axis=0).realize().reshape(4, 2).flatten()).item(), 48)
+
   def test_jit_1d_view_of_different_size_base(self):
     # a view is matched by the view, the size of the base it comes from doesn't matter
     @TinyJit
