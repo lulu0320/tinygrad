@@ -218,6 +218,14 @@ class TestJit(unittest.TestCase):
     with self.assertRaises(JitError):
       add(a, bad)
 
+  def test_jit_shape_mismatch_1d(self):
+    # a plain 1D buffer input has no view to carry its shape, so a different size must still be caught
+    @TinyJit
+    def f(a): return a.sum().realize()
+    for _ in range(3): f(Tensor.ones(3).contiguous().realize())
+    with self.assertRaises(JitError):
+      f(Tensor.ones(10).contiguous().realize())
+
   def test_jit_shape_views_mismatch(self):
     @TinyJit
     def add(a): return (a+1).realize()
